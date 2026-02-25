@@ -1,0 +1,68 @@
+name: Build agbplay for Linux
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  # Customize the CMake build type here (RelWithDebInfo is recommended for performance)
+  BUILD_TYPE: RelWithDebInfo
+
+jobs:
+  build:
+    # Run on the latest version of Ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          libfmt-dev \
+          nlohmann-json3-dev \
+          libboost-all-dev \
+          libzip-dev \
+          zlib1g-dev \
+          libncurses-dev \
+          portaudio19-dev \
+          qt6-base-dev \
+          libgl1-mesa-dev
+        
+        # Note: Additional Qt6 dependencies might be required depending on the system.
+        # The libgl1-mesa-dev package is often needed for OpenGL support with Qt.
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' directory. The BUILD_TYPE is set from the environment variable.
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      # Build the project
+      run: cmake --build build --config ${{env.BUILD_TYPE}} --parallel $(nproc)
+
+    - name: List build artifacts (optional)
+      run: |
+        echo "Build finished. Executables should be in build/src/agbplay-gui/ and build/src/agbplay-curses/"
+        ls -la build/src/agbplay-gui/ || true
+        ls -la build/src/agbplay-curses/ || true
+
+    - name: Upload GUI executable artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: agbplay-gui-linux
+        path: build/src/agbplay-gui/agbplay-gui
+        if-no-files-found: warn
+
+    - name: Upload Curses executable artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: agbplay-curses-linux
+        path: build/src/agbplay-curses/agbplay-curses
+        if-no-files-found: warn
